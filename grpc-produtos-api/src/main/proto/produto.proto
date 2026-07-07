@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package portfolio.produtos.v1;
+
+option java_multiple_files = true;
+option java_package = "com.portfolio.grpcprodutos.grpc.proto";
+option java_outer_classname = "ProdutoProto";
+
+service ProdutoService {
+  rpc CriarProduto (CriarProdutoRequest) returns (ProdutoResponse);
+  rpc BuscarProduto (BuscarProdutoRequest) returns (ProdutoResponse);
+  rpc ListarProdutos (ListarProdutosRequest) returns (ListarProdutosResponse);
+  rpc DeletarProduto (DeletarProdutoRequest) returns (DeletarProdutoResponse);
+}
+
+message CriarProdutoRequest {
+  string nome = 1;
+  string descricao = 2;
+  double preco = 3;
+  int32 quantidade_estoque = 4;
+}
+
+message BuscarProdutoRequest {
+  string id = 1;
+}
+
+message ListarProdutosRequest {
+  int32 pagina = 1;
+  int32 tamanho = 2;
+}
+
+message DeletarProdutoRequest {
+  string id = 1;
+}
+
+message DeletarProdutoResponse {
+  bool sucesso = 1;
+}
+
+message ProdutoResponse {
+  string id = 1;
+  string nome = 2;
+  string descricao = 3;
+  double preco = 4;
+  int32 quantidade_estoque = 5;
+  int64 criado_em_epoch_millis = 6;
+}
+
+message ListarProdutosResponse {
+  repeated ProdutoResponse itens = 1;
+  int32 pagina = 2;
+  int32 tamanho_pagina = 3;
+  int64 total_itens = 4;
+}
