@@ -1,80 +1,81 @@
-# REST vs gRPC — Comparativo com Spring Boot
+# REST vs gRPC — Spring Boot Comparison
 
-Dois microsserviços Spring Boot que implementam **exatamente a mesma regra de negócio**
-(um cadastro simples de Produtos), expostos por dois protocolos diferentes:
+Two Spring Boot microservices that implement **the exact same business logic**
+(a simple Product registry), exposed through two different protocols:
 
-| Projeto | Protocolo | Porta | Serialização |
+| Project | Protocol | Port | Serialization |
 |---|---|---|---|
 | `rest-produtos-api` | REST/HTTP 1.1 | `8080` | JSON (Jackson) |
 | `grpc-produtos-api` | gRPC/HTTP 2 | `9090` (gRPC) / `8081` (actuator) | Protobuf |
 
-O objetivo é isolar o overhead de **transporte e serialização**, não o de lógica de negócio:
-os dois projetos usam a mesma camada de `Service`/`Repository` (em memória, sem banco de
-dados), variando apenas a "casca" — `@RestController` de um lado, `@GrpcService` do outro.
+The goal is to isolate the **transport and serialization** overhead, not the business
+logic itself: both projects share the same `Service`/`Repository` layer (in-memory, no
+database), differing only in the "shell" — a `@RestController` on one side, a
+`@GrpcService` on the other.
 
-## Estrutura
+## Structure
 
 ```
 portfolio-benchmark/
 ├── rest-produtos-api/      # Spring Boot + Spring Web
 ├── grpc-produtos-api/      # Spring Boot + grpc-spring-boot-starter (net.devh)
-└── benchmark/              # Scripts k6 para reproduzir os testes de carga
+└── benchmark/              # k6 scripts to reproduce the load tests
     ├── k6-rest.js
     └── k6-grpc.js
 ```
 
-## Como rodar
+## How to run
 
 ### REST
 ```bash
 cd rest-produtos-api
 ./mvnw spring-boot:run
-# API em http://localhost:8080/api/v1/produtos
+# API at http://localhost:8080/api/v1/produtos
 ```
 
 ### gRPC
 ```bash
 cd grpc-produtos-api
 ./mvnw spring-boot:run
-# gRPC em localhost:9090 (use grpcurl ou BloomRPC/Postman para testar)
+# gRPC at localhost:9090 (use grpcurl or BloomRPC/Postman to test)
 ```
 
-Exemplo com `grpcurl`:
+Example with `grpcurl`:
 ```bash
 grpcurl -plaintext -d '{"pagina": 0, "tamanho": 20}' \
   localhost:9090 portfolio.produtos.v1.ProdutoService/ListarProdutos
 ```
 
-## Endpoints / RPCs equivalentes
+## Equivalent endpoints / RPCs
 
-| Ação | REST | gRPC |
+| Action | REST | gRPC |
 |---|---|---|
-| Criar | `POST /api/v1/produtos` | `ProdutoService/CriarProduto` |
-| Buscar por id | `GET /api/v1/produtos/{id}` | `ProdutoService/BuscarProduto` |
-| Listar (paginado) | `GET /api/v1/produtos?pagina=&tamanho=` | `ProdutoService/ListarProdutos` |
-| Deletar | `DELETE /api/v1/produtos/{id}` | `ProdutoService/DeletarProduto` |
+| Create | `POST /api/v1/produtos` | `ProdutoService/CriarProduto` |
+| Get by id | `GET /api/v1/produtos/{id}` | `ProdutoService/BuscarProduto` |
+| List (paginated) | `GET /api/v1/produtos?pagina=&tamanho=` | `ProdutoService/ListarProdutos` |
+| Delete | `DELETE /api/v1/produtos/{id}` | `ProdutoService/DeletarProduto` |
 
 ---
 
 ## Benchmark
 
-### Metodologia
+### Methodology
 
-- **Ferramenta:** [k6](https://k6.io) com a extensão [xk6-grpc](https://github.com/grafana/xk6-grpc) para ambos os protocolos (mesma ferramenta nos dois lados, para não introduzir viés de medição)
-- **Ambiente:** _(preencher: specs da máquina — CPU, RAM, SO)_, serviços executados um de cada vez (não simultaneamente)
-- **Warm-up:** 15s de aquecimento (JIT) descartados antes da coleta
-- **Duração da coleta:** 60s por cenário
-- **Payload:** objeto `Produto` com 5 campos (nome, descrição, preço, estoque, timestamp)
-- **Cenários de carga:** 10, 50, 100 e 500 usuários virtuais (VUs) concorrentes
-- **Operações medidas:** `GET/List` (listagem paginada de 20 itens) e `POST/Create`
-- **Data da execução:** _(preencher)_
+- **Tool:** [k6](https://k6.io) with the [xk6-grpc](https://github.com/grafana/xk6-grpc) extension for both protocols (same tool on both sides, to avoid measurement bias)
+- **Environment:** _(fill in: machine specs — CPU, RAM, OS)_, services run one at a time (not simultaneously)
+- **Warm-up:** 15s of warm-up (JIT) discarded before collection
+- **Collection duration:** 60s per scenario
+- **Payload:** `Produto` object with 5 fields (name, description, price, stock, timestamp)
+- **Load scenarios:** 10, 50, 100, and 500 concurrent virtual users (VUs)
+- **Measured operations:** `GET/List` (paginated listing of 20 items) and `POST/Create`
+- **Run date:** _(fill in)_
 
-### Resultados
+### Results
 
-> Rode os comandos da seção [Reproduzindo o benchmark](#reproduzindo-o-benchmark) e cole a
-> saída do `k6` (ou os valores extraídos dela) nas tabelas abaixo.
+> Run the commands in the [Reproducing the benchmark](#reproducing-the-benchmark) section
+> and paste the `k6` output (or the values extracted from it) into the tables below.
 
-#### Latência — operação de listagem (20 itens), por carga concorrente
+#### Latency — list operation (20 items), by concurrent load
 
 | VUs | REST p50 | REST p95 | REST p99 | gRPC p50 | gRPC p95 | gRPC p99 |
 |---|---|---|---|---|---|---|
@@ -83,51 +84,51 @@ grpcurl -plaintext -d '{"pagina": 0, "tamanho": 20}' \
 | 100 | | | | | | |
 | 500 | | | | | | |
 
-#### Throughput sustentado (requisições/segundo)
+#### Sustained throughput (requests/second)
 
-| VUs | REST (req/s) | gRPC (req/s) | Diferença |
+| VUs | REST (req/s) | gRPC (req/s) | Difference |
 |---|---|---|---|
 | 10  | | | |
 | 50  | | | |
 | 100 | | | |
 | 500 | | | |
 
-#### Payload e uso de recursos
+#### Payload and resource usage
 
-| Métrica | REST/JSON | gRPC/Protobuf |
+| Metric | REST/JSON | gRPC/Protobuf |
 |---|---|---|
-| Tamanho médio da resposta (list, 20 itens) | | |
-| CPU média sob 100 VUs | | |
-| Memória heap média sob 100 VUs | | |
+| Average response size (list, 20 items) | | |
+| Average CPU under 100 VUs | | |
+| Average heap memory under 100 VUs | | |
 
-### Leitura dos resultados
+### Reading the results
 
-_(preencher após rodar: pontos onde gRPC/REST se destacaram, onde a diferença foi maior/menor
-que o esperado, comportamento sob alta concorrência, etc.)_
+_(fill in after running: where gRPC/REST stood out, where the difference was bigger/smaller
+than expected, behavior under high concurrency, etc.)_
 
-### Reproduzindo o benchmark
+### Reproducing the benchmark
 
 ```bash
 # REST
 k6 run --env VUS=100 --env DURATION=60s benchmark/k6-rest.js
 
-# gRPC (requer build do k6 com xk6-grpc)
+# gRPC (requires a k6 build with xk6-grpc)
 k6 run --env VUS=100 --env DURATION=60s benchmark/k6-grpc.js
 ```
 
 ---
 
-## Tecnologias
+## Tech stack
 
 - Java 17
 - Spring Boot 3.3
 - Spring Web (REST)
 - grpc-spring-boot-starter / net.devh (gRPC)
 - Protocol Buffers 3
-- k6 + xk6-grpc (testes de carga)
+- k6 + xk6-grpc (load testing)
 
-## Possíveis evoluções
+## Possible next steps
 
-- Adicionar persistência real (Postgres) para medir o impacto de I/O de banco
-- Expor métricas via Micrometer + Prometheus/Grafana para observar os testes em tempo real
-- Adicionar streaming gRPC (server-streaming) como terceiro cenário de comparação
+- Add real persistence (Postgres) to measure the impact of database I/O
+- Expose metrics via Micrometer + Prometheus/Grafana to watch the tests in real time
+- Add gRPC streaming (server-streaming) as a third comparison scenario
